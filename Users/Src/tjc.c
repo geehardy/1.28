@@ -10,9 +10,9 @@
 
 char tjcTemp;
 Queue *TJCMsgQueue;
-//Queue *TJCTxQueue;
 TjcMsg tjcMsg = {.getEnd= true ,.getHead= false ,.head= 0 ,.endIndex=0 ,.tempData= {0} };
 uint8_t msgSendTemp[50];
+
 
 bool TJCInit()
 {
@@ -24,19 +24,44 @@ bool TJCInit()
     return true;
 };
 
+uint8_t MapState[12];	// 储存2区地图的状态
+uint8_t Mapindex=0;		// 2区地图索引，用来标记格子的序号
+uint32_t total = 0; 	// 用32位无符号整数暂存24位状态数据，避免溢出
+
+void R1Str_Deal(TjcMsg *tjcMsg)	// 用来处理字符串反馈有数据的情况
+{	
+	if(tjcMsg->tempData[0]==0x31)	//R1T
+		MapState[Mapindex] = 1;
+	else if(tjcMsg->tempData[0]==0x32)	//R2T
+		MapState[Mapindex] = 2;
+	else if(tjcMsg->tempData[0]==0x46)	//False
+		MapState[Mapindex] = 3;
+	Mapindex++;
+}
+
 void GetMsg(TjcMsg *tjcMsg, char msg, BW16 *bw)
 {
     if (tjcMsg->getHead)
     { // 得到包头
-        if (msg == end[tjcMsg->endIndex])
+			if (msg == end[tjcMsg->endIndex]&&(tjcMsg->numendflag ||tjcMsg->head!=num))	// 新增处理num负数反馈时出现并非包尾的FF的情况，click和string不变
         { // 检测包尾
-            tjcMsg->endIndex++;
-            if (tjcMsg->endIndex == strlen(end))
-            {
-                tjcMsg->getEnd = true;
-                tjcMsg->getHead = false;
-                tjcMsg->endIndex = 0;
-						}
+							tjcMsg->endIndex++;
+							if (tjcMsg->endIndex == strlen(end))
+							{
+								tjcMsg->getEnd = true;
+								tjcMsg->getHead = false;
+								tjcMsg->endIndex = 0;
+								if (tjcMsg->head==string && tjcMsg->datalen==0)	// 分支出来处理字符串反馈只有包头包尾没有数据的情况
+								{
+									MapState[Mapindex]=0;
+									Mapindex++;
+								}
+								if(Mapindex==12)	
+								{	// 当状态数组填满时，开始处理状态数组
+									R1Map_Deal();
+									Mapindex=0;
+								}
+							}
         }
 				else
 				    MsgDeal(tjcMsg, msg, bw);
@@ -44,12 +69,14 @@ void GetMsg(TjcMsg *tjcMsg, char msg, BW16 *bw)
     if (tjcMsg->getEnd)
     {
         if (MsgInHead(msg))  
-					{ // 检测包头，	TJC的包头只有一个字节，所以一次就判断出来，只不过要储存具体的值
+					{ // 检测包头并储存
             tjcMsg->head = msg;
             tjcMsg->datalen = 0;
             tjcMsg->getEnd = false;
             tjcMsg->getHead = true;
-        }
+						if(msg ==num)
+							tjcMsg->numendflag=false;
+					}
     }
 }
 
@@ -75,55 +102,55 @@ void R1dualswitchval_deal(TjcMsg *tjcMsg)
     switch (dualswitchvalIndex)	//
     {
     case 1:
-        BoolChange(ChassisAsk, !Boolback(ChassisAsk));
-        dualswitchvalIndex = 0;
-        return;
-    case 2:
         BoolChange(LockAngle1, !Boolback(LockAngle1));
         dualswitchvalIndex = 0;
         return;
-    case 3:
+    case 2:
         BoolChange(LockPoint1, !Boolback(LockPoint1));
         dualswitchvalIndex = 0;
         return;
-    case 4:
+    case 3:
         BoolChange(ITL1, !Boolback(ITL1));
         dualswitchvalIndex = 0;
         return;
+    case 4:
+        BoolChange(Zero, !Boolback(Zero));
+        dualswitchvalIndex = 0;
+        return;
 		case 5:
-				BoolChange(MatchOK, !Boolback(MatchOK));
+				BoolChange(BeltSwith, !Boolback(BeltSwith));
 				dualswitchvalIndex = 0;
 				return;
 		case 6:
-				BoolChange (BeltSwith, !Boolback(BeltSwith));
+				Press(MatchOK);
 				dualswitchvalIndex = 0;
 				return;
 		case 7:
-				BoolChange (TurnBelt, !Boolback(TurnBelt));
+				Press(TurnBelt);
 				dualswitchvalIndex = 0;
 				return;
 		case 8:
-				BoolChange (LiftMode, !Boolback(LiftMode));
+				Press(Refresh);
 				dualswitchvalIndex = 0;
 				return;
 		case 9:
-				BoolChange (TakeCubeMode, !Boolback(TakeCubeMode));
+				Press(ReGPS);
 				dualswitchvalIndex = 0;
 				return;
 		case 10:
-				BoolChange (PassCubeMode, !Boolback(PassCubeMode));
+				Press(SetZero);
 				dualswitchvalIndex = 0;
 				return;
 		case 11:
-				BoolChange (WheelAuto, !Boolback(WheelAuto));
+				Press(ChassisAsk);
 				dualswitchvalIndex = 0;
 				return;
 		case 12:
-				BoolChange (AutoAct, !Boolback(AutoAct));
+				Press(WheelAuto);
 				dualswitchvalIndex = 0;
 				return;
 		case 13:
-				BoolChange (Refresh, !Boolback(Refresh));
+				Press(AutoAct);
 				dualswitchvalIndex = 0;
 				return;
     default:
@@ -157,38 +184,23 @@ void R1val_Deal(TjcMsg *tjcMsg)
     }
     case 4:
     {
-      if(tjcMsg->tempData[0]<7)
-			{
-				memcpy(&r1controlmsg.pilenum1, tjcMsg->tempData, 4);
-				r1controlmsg.pilenum2=0;
-			}
-			else
-			{
-				memcpy(&r1controlmsg.pilenum2, tjcMsg->tempData, 4);
-				r1controlmsg.pilenum1=0;
-			}
-      msgbackIndex++;
-      break;
-    }
-    case 5:
-    {
         memcpy(&r1controlmsg.up, tjcMsg->tempData, 2);
         msgbackIndex++;
         break;
     }
-    case 6:
+    case 5:
     {
         memcpy(&r1controlmsg.tex, tjcMsg->tempData, 2);
         msgbackIndex++;
         break;
     }
-    case 7:
+    case 6:
     {
         memcpy(&r1controlmsg.tey, tjcMsg->tempData, 2);
         msgbackIndex++;
         break;
     }
-    case 8:
+    case 7:
     {
         memcpy(&r1controlmsg.angle, tjcMsg->tempData, 2);
         msgbackIndex =1;
@@ -204,59 +216,57 @@ void R2dualswitchval_deal(TjcMsg *tjcMsg)
 	    // 双态开关val接收
     switch (dualswitchvalIndex)
     {
-    case 14:
+    case 1:
     {
-        BoolChange (InstSt, !Boolback(InstSt));
-        dualswitchvalIndex = 0;
-				osDelay(5);
-        return;
-    }
-    case 15:
-    {
-        BoolChange (WheelSt, !Boolback(WheelSt));
+        BoolChange(LockAngle2, !Boolback(LockAngle2));
         dualswitchvalIndex = 0;
         return;
     }
-		case 16:
+    case 2:
     {
-        BoolChange (WeaponSession, !Boolback(WeaponSession));
-        dualswitchvalIndex = 0;
-				osDelay(5);
-        return;
-    }
-		case 17:
-    {
-        BoolChange (LockAngle2, !Boolback(LockAngle2));
+        BoolChange (ITL2, !Boolback(ITL2));
         dualswitchvalIndex = 0;
         return;
     }
-		case 18:
+		case 3:
     {
-        BoolChange(ITL2, !Boolback(ITL2));
+        BoolChange (RorB, !Boolback(RorB));
         dualswitchvalIndex = 0;
         return;
     }
-		case 19:
+		case 4:
     {
-        BoolChange(WeaponPre, !Boolback(WeaponPre));
+        Press(LockPoint2);
         dualswitchvalIndex = 0;
         return;
     }
-		case 20:
+		case 5:
     {
-        BoolChange(ArmPre2, !Boolback(ArmPre2));
+        Press(WeaponPre);
         dualswitchvalIndex = 0;
         return;
     }
-		case 21:
+		case 6:
     {
-        BoolChange(LockPoint2, !Boolback(LockPoint2));
+        Press(ArmPre2);
         dualswitchvalIndex = 0;
         return;
     }
-		case 22:
+		case 7:
     {
-        BoolChange(RorB, !Boolback(RorB));
+        Press(WeaponSession);
+        dualswitchvalIndex = 0;
+        return;
+    }
+		case 8:
+    {
+        Press(InstSt);
+        dualswitchvalIndex = 0;
+        return;
+    }
+		case 9:
+    {
+        Press(WheelSt);
         dualswitchvalIndex = 0;
         return;
     }
@@ -319,161 +329,53 @@ void R2val_Deal(TjcMsg *tjcMsg)
     }
 }
 
+void R1Map_Deal()
+{
+	for(int i=0;i<12;i++)
+		total |= (uint32_t)MapState[i] << (2 * (11 - i));
+	r1controlmsg.Map[0] = (total >> 16) & 0xFF; // 高8位 → 第1个字节		
+  r1controlmsg.Map[1] = (total >> 8) & 0xFF;  // 中8位 → 第2个字节		
+  r1controlmsg.Map[2] = total & 0xFF;         // 低8位 → 第3个字节		
+}
+
 void MsgDeal(TjcMsg *tjcMsg, char msg, BW16 *bw)
 {
 		tjcMsg->tempData[tjcMsg->datalen] = msg;
 		tjcMsg->datalen++;
 		if(tjcMsg->head == click && tjcMsg->datalen==3)
     {
-						//R1双态开关反馈处理
-            if (tjcMsg->tempData[0] == 0x01 && tjcMsg->tempData[1] == 0x01 && tjcMsg->tempData[2] == 0x01)
-            {
-                dualswitchvalIndex = 1;
-								R1dualswitchval_deal(tjcMsg);
-                return;
-            }
-            if (tjcMsg->tempData[0] == 0x01 && tjcMsg->tempData[1] == 0x02 && tjcMsg->tempData[2] == 0x01)
-            {
-                dualswitchvalIndex = 2;
-								R1dualswitchval_deal(tjcMsg);
-                return;
-            }
-						if (tjcMsg->tempData[0] == 0x01 && tjcMsg->tempData[1] == 0x03 && tjcMsg->tempData[2] == 0x01)
-            {
-                dualswitchvalIndex = 3;
-								R1dualswitchval_deal(tjcMsg);
-                return;
-            }
-						if (tjcMsg->tempData[0] == 0x01 && tjcMsg->tempData[1] == 0x04 && tjcMsg->tempData[2] == 0x01)
-            {
-                dualswitchvalIndex = 4;
-								R1dualswitchval_deal(tjcMsg);
-                return;
-            }
-						if (tjcMsg->tempData[0] == 0x01 && tjcMsg->tempData[1] == 0x05 && tjcMsg->tempData[2] == 0x01)
-            {
-                dualswitchvalIndex = 5;
-								R1dualswitchval_deal(tjcMsg);
-                return;
-            }
-						if (tjcMsg->tempData[0] == 0x01 && tjcMsg->tempData[1] == 0x06 && tjcMsg->tempData[2] == 0x01)
-            {
-                dualswitchvalIndex = 6;
-								R1dualswitchval_deal(tjcMsg);
-                return;
-            }
-						if (tjcMsg->tempData[0] == 0x01 && tjcMsg->tempData[1] == 0x07 && tjcMsg->tempData[2] == 0x01)
-            {
-                dualswitchvalIndex = 7;
-								R1dualswitchval_deal(tjcMsg);
-                return;
-            }
-						if (tjcMsg->tempData[0] == 0x01 && tjcMsg->tempData[1] == 0x08 && tjcMsg->tempData[2] == 0x01)
-            {
-                dualswitchvalIndex = 8;
-								R1dualswitchval_deal(tjcMsg);
-                return;
-            }
-						if (tjcMsg->tempData[0] == 0x01 && tjcMsg->tempData[1] == 0x09 && tjcMsg->tempData[2] == 0x01)
-            {
-                dualswitchvalIndex = 9;
-								R1dualswitchval_deal(tjcMsg);
-                return;
-            }
-						if (tjcMsg->tempData[0] == 0x01 && tjcMsg->tempData[1] == 0x0A && tjcMsg->tempData[2] == 0x01)
-            {
-                dualswitchvalIndex = 10;
-								R1dualswitchval_deal(tjcMsg);
-                return;
-            }
-						if (tjcMsg->tempData[0] == 0x01 && tjcMsg->tempData[1] == 0x0B && tjcMsg->tempData[2] == 0x01)
-            {
-                dualswitchvalIndex = 11;
-								R1dualswitchval_deal(tjcMsg);
-                return;
-            }
-						if (tjcMsg->tempData[0] == 0x01 && tjcMsg->tempData[1] == 0x0C && tjcMsg->tempData[2] == 0x01)
-            {
-                dualswitchvalIndex = 12;
-								R1dualswitchval_deal(tjcMsg);
-                return;
-            }
-						if (tjcMsg->tempData[0] == 0x01 && tjcMsg->tempData[1] == 0x0D && tjcMsg->tempData[2] == 0x01)
-            {
-                dualswitchvalIndex = 13;
-								R1dualswitchval_deal(tjcMsg);
-                return;
-            }
-						
-						//R2双态开关反馈处理
-            if (tjcMsg->tempData[0] == 0x02 && tjcMsg->tempData[1] == 0x07 && tjcMsg->tempData[2] == 0x01)
-            {
-                dualswitchvalIndex = 14;
-								R2dualswitchval_deal(tjcMsg);
-                return;
-            }
-            if (tjcMsg->tempData[0] == 0x02 && tjcMsg->tempData[1] == 0x08 && tjcMsg->tempData[2] == 0x01)
-            {
-                dualswitchvalIndex = 15;
-								R2dualswitchval_deal(tjcMsg);
-                return;
-            }
-            if (tjcMsg->tempData[0] == 0x02 && tjcMsg->tempData[1] == 0x09 && tjcMsg->tempData[2] == 0x01)
-            {
-                dualswitchvalIndex = 16;
-								R2dualswitchval_deal(tjcMsg);
-                return;
-            }
-            if (tjcMsg->tempData[0] == 0x02 && tjcMsg->tempData[1] == 0x0A && tjcMsg->tempData[2] == 0x01)
-            {
-                dualswitchvalIndex = 17;
-								R2dualswitchval_deal(tjcMsg);
-                return;
-            }
-						if (tjcMsg->tempData[0] == 0x02 && tjcMsg->tempData[1] == 0x0B && tjcMsg->tempData[2] == 0x01)
-            {
-                dualswitchvalIndex = 18;
-								R2dualswitchval_deal(tjcMsg);
-                return;
-            }
-						if (tjcMsg->tempData[0] == 0x02 && tjcMsg->tempData[1] == 0x0C && tjcMsg->tempData[2] == 0x01)
-            {
-                dualswitchvalIndex = 19;
-								R2dualswitchval_deal(tjcMsg);
-                return;
-            }
-						if (tjcMsg->tempData[0] == 0x02 && tjcMsg->tempData[1] == 0x0D && tjcMsg->tempData[2] == 0x01)
-            {
-                dualswitchvalIndex = 20;
-								R2dualswitchval_deal(tjcMsg);
-                return;
-            }
-						if (tjcMsg->tempData[0] == 0x02 && tjcMsg->tempData[1] == 0x0E && tjcMsg->tempData[2] == 0x01)
-            {
-                dualswitchvalIndex = 21;
-								R2dualswitchval_deal(tjcMsg);
-                return;
-            }
-						if (tjcMsg->tempData[0] == 0x02 && tjcMsg->tempData[1] == 0x0F && tjcMsg->tempData[2] == 0x01)
-            {
-                dualswitchvalIndex = 22;
-								R2dualswitchval_deal(tjcMsg);
-                return;
-            }
-        }
-//        if (tjcMsg->head == string && tjcMsg->getEnd)	// 如果是字符串反馈
-//        { 
-//            bw->nameLen = tjcMsg->datalen - strlen(end);
-//            memcpy(&bw->name, &tjcMsg->tempData, bw->nameLen);
-//            return;
-//        }
-        if (tjcMsg->head == num && tjcMsg->datalen==4)	// 如果是数值反馈
-        { 
-            if (flag.RobotMode == 0)
-                R1val_Deal(tjcMsg);
-            else
-                R2val_Deal(tjcMsg);
-        }
+				if (tjcMsg->tempData[0] == 0x01 && tjcMsg->tempData[2] == 0x01)	 //R1双态开关反馈处理
+				{
+					dualswitchvalIndex=tjcMsg->tempData[1];
+					R1dualswitchval_deal(tjcMsg);
+					return;
+				}
+				if (tjcMsg->tempData[0] == 0x02 && tjcMsg->tempData[2] == 0x01)	 //R2双态开关反馈处理
+				{
+					dualswitchvalIndex=tjcMsg->tempData[1];
+					R2dualswitchval_deal(tjcMsg);
+					return;
+				}
+    }
+    if (tjcMsg->head == string && tjcMsg->datalen==1)	// 如果是字符串反馈
+    { 
+					R1Str_Deal(tjcMsg);
+					return;
+    }
+    if (tjcMsg->head == num && tjcMsg->datalen==4)	// 如果是数值反馈
+    { 
+				tjcMsg->numendflag=true;
+				if (flag.RobotMode == 0)
+				{	
+					R1val_Deal(tjcMsg);
+					return;
+				}
+        else
+				{
+          R2val_Deal(tjcMsg);
+					return;
+				}
+    }
 }
 void MsgSend(char *msgSend)
 {
@@ -485,7 +387,24 @@ void MsgSend(char *msgSend)
     strcat((char *)msgSendTemp, end); // 拼接数据和包尾
     HAL_UART_Transmit_DMA(&huart3, msgSendTemp, dataLen + strlen(end));
 }
-void powerSend(uint8_t power)	// 应该是作为进度条的数据
+
+void TxtmsgSend(char *msgSend)	// 发送文本控件的文字,需要加双引号
+{
+    size_t dataLen = strlen(msgSend);
+    memset(msgSendTemp, 0, 50);	// 初始化数组
+		if(flag.RobotMode==0)
+		memcpy(msgSendTemp, "R1.t0.txt=",10);
+		else
+		memcpy(msgSendTemp, "R2.t0.txt=",10);
+		dataLen +=10;
+    strcat((char *)msgSendTemp, msgSend);
+    msgSendTemp[dataLen] = '\0';
+    strcat((char *)msgSendTemp, end); // 拼接数据和包尾
+		msgSendTemp[dataLen + strlen(end)] = '\0';
+    HAL_UART_Transmit_DMA(&huart3, msgSendTemp, dataLen + strlen(end));
+}
+
+void powerSend(uint16_t power)	// 应该是作为进度条的数据
 {
 
     memset(msgSendTemp, 0, 50);
@@ -569,31 +488,31 @@ void float_valsend(uint8_t num, float val)
 
 void R1_TJC_val_show()
 {
-    valSend(8, r1backmsg.ang0);
-    osDelay(10);
-    valSend(9, r1backmsg.ang1);
-    osDelay(10);
-    valSend(10, r1backmsg.ang2);
-    osDelay(10);
-    valSend(11, r1backmsg.ang3);
-    osDelay(10);
+    valSend(7, r1backmsg.ang0);
+    osDelay(5);
+    valSend(8, r1backmsg.ang1);
+    osDelay(5);
+    valSend(9, r1backmsg.ang2);
+    osDelay(5);
+    valSend(10, r1backmsg.ang3);
+    osDelay(5);
 }
 void R2_TJC_val_show()
 {
 		valSend(6, r2backmsg.FL);
-    osDelay(10);
+    osDelay(5);
     valSend(7, r2backmsg.FR);
-    osDelay(10);
+    osDelay(5);
     valSend(8, r2backmsg.BL);
-    osDelay(10);
+    osDelay(5);
     valSend(9, r2backmsg.BR);
-    osDelay(10);
+    osDelay(5);
 		valSend(10, r2backmsg.grid);
-    osDelay(10);
+    osDelay(5);
     valSend(11, r2backmsg.upperarm);
-    osDelay(10);
+    osDelay(5);
     valSend(12, r2backmsg.takehead);
-    osDelay(10);
+    osDelay(5);
     valSend(13, r2backmsg.wheelstate);
-    osDelay(10);
+    osDelay(5);
 }

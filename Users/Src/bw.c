@@ -43,8 +43,8 @@ void R1_BWtranMsgDeal(BW16 *bw, char msg)
     bw->redatalen++;
     if (bw->redatalen==25)   		
     {
-        if(bw->CheckBite==bw->tempData[24])
-			{
+        if(bw->CheckBite==bw->tempData[24])	// 校验位正确
+				{
 				memcpy(&r1backmsg.ang0, &bw->tempData[0], 2);
         memcpy(&r1backmsg.ang1, &bw->tempData[2], 2);
         memcpy(&r1backmsg.ang2, &bw->tempData[4], 2);
@@ -54,12 +54,15 @@ void R1_BWtranMsgDeal(BW16 *bw, char msg)
         memcpy(&r1backmsg.Yaw, &bw->tempData[16], 4);
         memcpy(&r1backmsg.pitch, &bw->tempData[20], 4);					
         flag.TJCvalfrash = true;
-			}
+				}
 				bw->redatalen = 0;
 				bw->CheckBite = 0;
+				osDelay(5);	//防止被优化
     }
 		else
+		{
 			bw->CheckBite+= msg;
+		}
 }
 void R2_BWtranMsgDeal(BW16 *bw, char msg)
 { // R2接收数据处理
@@ -84,6 +87,7 @@ void R2_BWtranMsgDeal(BW16 *bw, char msg)
 			}
 			bw->redatalen = 0;
 			bw->CheckBite = 0;
+			osDelay(5);	//防止被优化
     }
 		else
 			bw->CheckBite+= msg;

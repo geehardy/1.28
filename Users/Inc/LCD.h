@@ -15,4 +15,5 @@ void JS_measure_show();
 void Auto_Connect_show();
 void Beep(uint8_t times, uint16_t delaytime);
 void HalBeep(uint8_t times, uint16_t delaytime);
+extern void BTstatus_show();
 #endif

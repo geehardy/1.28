@@ -39,6 +39,6 @@ bool Boolback(ConBool Type)
 void Press(ConBool type)
 {
     BoolChange(type, 1);
-    osDelay(30);
+    osDelay(20);
     BoolChange(type, 0);
 }

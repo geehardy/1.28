@@ -73,14 +73,14 @@ void joystickRight_scan(); // 右边摇杆的扫描
 
 // 需要满电状态测
 /*
-max 8.4v *1/4 2.1v  4096*(2.1/3.3)=
-min 3.7v *1/4 0.9v
+max 8.4v *1/4 2.1  4096*(2.1/3.3)= 2606
+min 6v   *1/4 1.5	 4096*(1.5/3.3)= 1862
 */
 // 理论值
-#define MAX_power 2430
-#define MIN_power 2160
+#define MAX_power 2606
+#define MIN_power 0
 
-uint8_t power_scan(); // 返回电量
+uint16_t power_scan(); // 返回电量
 
 void R1_key_function(uint8_t keynum);
 void R1_toggle_function(uint8_t togglenum);

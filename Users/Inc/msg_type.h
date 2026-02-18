@@ -96,6 +96,7 @@ typedef struct R1ControlMsg_S
     uint8_t BOOL[R1BoolNum/8+1]; 
     uint8_t area; 	//所在区域
     uint8_t rod; 		//杆号
+		uint8_t Map[3];	//2区地图状态
 		short angle; 		//角度
 		short tex; 			//
 		short tey; 			//
@@ -104,8 +105,6 @@ typedef struct R1ControlMsg_S
 		short setw;
 		short layer;		//层
 		short up;				//升
-    int pilenum1;	//0~6桩
-    int pilenum2;	//7~12桩
 } R1ControlMsg_S;
 
 typedef struct R1BackMsg_S

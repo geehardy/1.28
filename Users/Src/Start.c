@@ -10,13 +10,13 @@
 											
 void Handle_Start(void)
 {
-    // 基本变量标志位按键引脚初始化
+    // 基本变量、标志位、按键引脚初始化
     FlagInit();
     TempInit();
     KeyInit();
     LCD_Init();
     LCD_ShowHome();
-    // 设置机器人模式
+		// 设置机器人模式,默认为R1
 		LCD_ShowString(10 ,10 ,(uint8_t *)"R1",WHITE ,BLACK ,32 ,0 );
 		LCD_ShowString(10 ,42 ,(uint8_t *)"Select Mode...",WHITE ,BLACK ,12 ,0);
 		HAL_Delay(100);
@@ -28,7 +28,7 @@ void Handle_Start(void)
 					if(!flag.RobotMode)
 					{
 						LCD_ShowString(10 ,10 ,(uint8_t *)"R1",WHITE ,BLACK ,32 ,0 );
-						MsgSend("RobotMode=0");
+						MsgSend("RobotMode=0");	// 同步控制串口屏(小屏显示为主)
 						HAL_Delay(20);
 					}
 					else
@@ -41,15 +41,17 @@ void Handle_Start(void)
 				}
 				if(KeyRead(TOP_RIGHT)==GPIO_PIN_RESET) // 确定模式
 				{
+					MsgSend("page main");	// 防止串口屏与小屏不同步
+					HAL_Delay(100);
 					if(!flag.RobotMode)	
-						MsgSend("click m0,0");	//调整串口屏的模式
+						MsgSend("click m0,0");	
 					else
 						MsgSend("click m1,0");	
 					break;
 				}
 			}
     JoystickInit();	// 开启摇杆ADC采样
-		Usart2DataFrameInit(USART_SUM_CHECK);
+		Usart2DataFrameInit(USART_SUM_CHECK);	// 初始化U2串口数据包框架，包括包头包尾检验位
     LCD_ShowHome();
 			
 		#if joystickmeasureFlag==1	// 摇杆极限值校准
@@ -88,7 +90,6 @@ void Handle_Start(void)
 		
 		HAL_Delay(500);
     LCD_ShowHome();      // 清屏
-    flag.QUEUErx = true; // 打开队列接收,之前串口、接收的数据从未入队
+    flag.QUEUErx = true; // 打开队列接收,之前串口接收的数据未入队
 		flag.QUEUEtx = true; // 打开队列发送
-		
 }

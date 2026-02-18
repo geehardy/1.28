@@ -11,9 +11,7 @@ void FlagInit(void)
     flag.QUEUEtx = false;
     flag.LCDfirstshow = true;
     flag.JSfast_slow = true;
-		flag.JSfast_slow_last=false;
     flag.JSalonemode = true;		
-		flag.JSalonemode_last=false;
     flag.TJCvalfrash = false;
 }
 void TempInit(void)

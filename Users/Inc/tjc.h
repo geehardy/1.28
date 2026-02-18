@@ -49,6 +49,7 @@ typedef struct TjcMsg {	//串口接收数据
     bool getHead;
     char head;
     int datalen;
+		bool numendflag;	// 用来区分数据是否是end的包尾
     int endIndex; // 结束标记的索引
     char tempData[16];
 } TjcMsg;
@@ -62,7 +63,10 @@ void GetMsg(TjcMsg *tjcMsg, char msg, BW16 *bw);
 bool MsgInHead(char msg);
 void MsgDeal(TjcMsg *tjcMsg, char msg, BW16 *bw);
 void MsgSend(char *msgSend);
-void powerSend(uint8_t power);
+void TxtmsgSend(char *msgSend);
+void powerSend(uint16_t power);
+void R1Str_Deal(TjcMsg *tjcMsg);
+void R1Map_Deal();
 void valSend(uint8_t num, int16_t val);
 void float_valsend(uint8_t num, float val);
 void R1_TJC_val_show();
@@ -75,5 +79,4 @@ void R2val_Deal(TjcMsg *tjcMsg);
 
 extern TjcMsg tjcMsg;
 extern char tjcTemp;
-
 #endif

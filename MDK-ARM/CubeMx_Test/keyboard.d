@@ -28,7 +28,7 @@ cubemx_test/keyboard.o: ..\Users\Src\keyboard.c ..\Users\Inc\keyboard.h \
   ..\Drivers\STM32F4xx_HAL_Driver\Inc\stm32f4xx_hal_tim_ex.h \
   ..\Drivers\STM32F4xx_HAL_Driver\Inc\stm32f4xx_hal_uart.h \
   ..\Users\Inc\utility.h ..\Users\Inc\data_process.h \
-  ..\Users\Inc\msg_type.h ..\Core\Inc\adc.h \
+  ..\Users\Inc\msg_type.h ..\Core\Inc\adc.h ..\Users\Inc\tjc.h \
+  ..\Users\Inc\bw.h \
   ..\Middlewares\Third_Party\FreeRTOS\Source\CMSIS_RTOS_V2\cmsis_os2.h \
-  ..\Users\Inc\Variables.h ..\Users\Inc\bw.h ..\Users\Inc\LCD.h \
-  ..\Users\Inc\st7735.h
+  ..\Users\Inc\Variables.h ..\Users\Inc\LCD.h ..\Users\Inc\st7735.h

@@ -58,7 +58,7 @@
 
 static uint8_t TJCtxbuffer[128];
 static uint8_t BWtxbuffer[128];
-
+//uint32_t last_refresh_time = 0;
 
 char BWrxmsg;
 char TJCrxmsg;
@@ -89,7 +89,7 @@ osThreadId_t TJCmsg_TaskHandle;
 const osThreadAttr_t TJCmsg_Task_attributes = {
   .name = "TJCmsg_Task",
   .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityLow2,
+  .priority = (osPriority_t) osPriorityLow3,
 };
 /* Definitions for BTmsg_Task */
 osThreadId_t BTmsg_TaskHandle;
@@ -103,7 +103,7 @@ osThreadId_t LCDLED_TaskHandle;
 const osThreadAttr_t LCDLED_Task_attributes = {
   .name = "LCDLED_Task",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityLow3,
+  .priority = (osPriority_t) osPriorityLow2,
 };
 
 /* Private function prototypes -----------------------------------------------*/
@@ -216,7 +216,7 @@ void TJCshowTask(void *argument)
   /* Infinite loop */
   for (;;)
   {
-    if (flag.TJCvalfrash)	//等蓝牙接收并处理数据之后，才能发送
+    if (flag.TJCvalfrash)	// 等蓝牙处理数据后发送
     {
       if (flag.RobotMode== 0)
         R1_TJC_val_show();
@@ -224,13 +224,12 @@ void TJCshowTask(void *argument)
         R2_TJC_val_show();
      	flag.TJCvalfrash = false;
     }
-		
 		if (temp.POWERflashtic++ == 100)	// 检测电量
     {
       powerSend(power_scan());
       temp.POWERflashtic = 0;
     }
-    osDelay(60);
+    osDelay(40);
   }
   /* USER CODE END TJCshowTask */
 }
@@ -248,16 +247,16 @@ void KeyTask(void *argument)
   /* Infinite loop */
   for (;;)
   {
-      temp.key_num = KeyScan();      	  // 按键扫描
-		  temp.ToggleNum = ToggleScan();		// 拨动开关扫描
-			if (temp.key_num != 0)	//扫描到按键变化
+      temp.key_num = KeyScan();      	  
+		  temp.ToggleNum = ToggleScan();		
+			if (temp.key_num != 0)	// 扫描到按键变化
 			{
 				if (flag.RobotMode== 0)
 					R1_key_function(temp.key_num);
 				else
 					R2_key_function(temp.key_num);
 			}
-			if(temp.ToggleNum!=temp.ToggleNumlast && (!flag.LCDfirstshow))	//先让基本要素刷新出来
+			if(temp.ToggleNum!=temp.ToggleNumlast)	
 			{						
 					Toggle_status_show();
 					temp.ToggleNumlast=temp.ToggleNum ;
@@ -266,7 +265,7 @@ void KeyTask(void *argument)
 					else
 						R2_toggle_function(temp.ToggleNum);
 			}
-//			osDelay(25);
+			osDelay(30);
   }
   /* USER CODE END KeyTask */
 }
@@ -284,12 +283,10 @@ void JoystickTask(void *argument)
   /* Infinite loop */
   for (;;)
   { 
-    joystickLeft1_scan();
+    joystickLeft2_scan();
     if (!flag.JSalonemode)
-      joystickLeft2_scan();
-		
+      joystickLeft1_scan();
     joystickRight_scan();
-		
     if (flag.RobotMode == 0)
     {
       r1controlmsg.setx = JScontrolmsg.velX; // 将摇杆控制消息赋值给R1控制消息
@@ -302,7 +299,6 @@ void JoystickTask(void *argument)
       r2controlmsg.Vy = JScontrolmsg.velY;
       r2controlmsg.Vw = JScontrolmsg.angW;
     }
-		
     uint8_t *data;		
     if (flag.RobotMode == 0)
        data = dataEncode(R1all_ID, &U2DataFrame); // 编码
@@ -382,20 +378,17 @@ void LCDLEDTask(void *argument)
   {
       if (flag.LCDfirstshow) // 第一次LCD刷新界面基本文字要素
       {
-				if (flag.RobotMode == 0) // R1
+				if (flag.RobotMode == 0)
 					R1_Interface();
-				else // R2
+				else 
           R2_Interface();
-				
 				Toggle_status_show();
 				temp.ToggleNum=0x0F;	
-				
+				BTstatus_show();	// 显示一些没用的东西
         flag.LCDfirstshow = false;
       }
       else
-      {
         LCD_flash(); // 动态显示
-      }
     osDelay(40);
   }
   /* USER CODE END LCDLEDTask */

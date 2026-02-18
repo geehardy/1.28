@@ -70,11 +70,11 @@ void R2_Interface()
 }
 void Toggle_status_show()
 {
-    LCD_ShowIntNum(15, 103, (temp.ToggleNum & 0x80) >> 7, 1, WHITE, BLACK, 24);
+		LCD_Fill(15, 103, 150, 130, BLACK);	// 先将显示拨动开关状态的区域涂黑
+		LCD_ShowIntNum(15, 103, (temp.ToggleNum & 0x80) >> 7, 1, WHITE, BLACK, 24);
     LCD_ShowIntNum(55, 103, (temp.ToggleNum & 0x40) >> 6, 1, WHITE, BLACK, 24);
     LCD_ShowIntNum(93, 103, (temp.ToggleNum & 0x20) >> 5, 1, WHITE, BLACK, 24);
     LCD_ShowIntNum(133, 103, (temp.ToggleNum & 0x10) >> 4, 1, WHITE, BLACK, 24);
-		osDelay(10);
 }
 
 void BTstatus_show()
@@ -98,15 +98,15 @@ void LCD_flash()
 		osDelay(10);
     if (flag.RobotMode == 0)
     {
-        LCD_ShowIntNum(91, 10, r1backmsg.disX, 4, WHITE, BLACK, 12);
-        LCD_ShowIntNum(91, 30, r1backmsg.disY, 4, WHITE, BLACK, 12);
+        LCD_ShowFloatNum1(91, 10, r1backmsg.disX, 7, WHITE, BLACK, 12);
+        LCD_ShowFloatNum1(91, 30, r1backmsg.disY, 7, WHITE, BLACK, 12);
         LCD_ShowFloatNum1(91, 50, r1backmsg.Yaw, 7, WHITE, BLACK, 12);
 				LCD_ShowFloatNum1(91, 70, r1backmsg.pitch, 7, WHITE, BLACK, 12);
 		}
     else
     {
-        LCD_ShowFloatNum1(91, 10, r2backmsg.X, 7, WHITE, BLACK, 12);
-        LCD_ShowFloatNum1(91, 30, r2backmsg.Y, 7, WHITE, BLACK, 12);
+        LCD_ShowIntNum(91, 10, r2backmsg.X, 4, WHITE, BLACK, 12);
+        LCD_ShowIntNum(91, 30, r2backmsg.Y, 4, WHITE, BLACK, 12);
         LCD_ShowFloatNum1(91, 50, r2backmsg.angle, 7, WHITE, BLACK, 12);
     }
     Draw_Circle(temp.L1xlast, temp.L1ylast, 1, BLACK);
@@ -118,24 +118,12 @@ void LCD_flash()
     temp.L1ylast = temp.L1yNow;
     temp.Rxlast = temp.RxNow;
 		osDelay(10);
-    BTstatus_show();
 }
 void JS_measure_show()
 {
     LCD_ShowHome();
     LCD_ShowString(20, 50, (uint8_t *)"joystick measure...", WHITE, BLACK, 12, 0);
 }
-
-
-//void Auto_Connect_show()
-//{
-//    LCD_ShowHome();
-//    LCD_ShowString(0, 50, (uint8_t *)"Auto connect", WHITE, BLACK, 24, 0);
-//    while (bw.autoconnect)
-//    {
-//        osDelay(100);
-//    }
-//}
 
 void Beep(uint8_t times, uint16_t delaytime)
 {
