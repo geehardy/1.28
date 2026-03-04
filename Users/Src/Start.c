@@ -90,6 +90,6 @@ void Handle_Start(void)
 		
 		HAL_Delay(500);
     LCD_ShowHome();      // 清屏
-    flag.QUEUErx = true; // 打开队列接收,之前串口接收的数据未入队
+    flag.QUEUErx = true; // 打开队列接收,之前串口接收的数据未入队，用于小屏显示
 		flag.QUEUEtx = true; // 打开队列发送
 }

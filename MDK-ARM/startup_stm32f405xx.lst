@@ -825,12 +825,12 @@ ARM Macro Assembler    Page 13
               00001000 
               00001200 
               00000000 
-Command Line: --debug --xref --diag_suppress=9931,A1950W --cpu=Cortex-M4.fp.sp 
---depend=cubemx_test\startup_stm32f405xx.d -ocubemx_test\startup_stm32f405xx.o 
--I../Drivers/CMSIS/Include -I.\RTE\_CubeMx_Test -IC:\Users\Administrator\AppDat
-a\Local\Arm\Packs\ARM\CMSIS\6.1.0\CMSIS\Core\Include --predefine="__UVISION_VER
-SION SETA 540" --predefine="STM32F405xx SETA 1" --predefine="_RTE_ SETA 1" --li
-st=startup_stm32f405xx.lst startup_stm32f405xx.s
+Command Line: --debug --xref --diag_suppress=9931 --cpu=Cortex-M4.fp --depend=c
+ubemx_test\startup_stm32f405xx.d -ocubemx_test\startup_stm32f405xx.o -I../Drive
+rs/CMSIS/Include -I.\RTE\_CubeMx_Test -IC:\Keil_v5\ARM\PACK\ARM\CMSIS\5.0.1\CMS
+IS\Include -IC:\Keil_v5\ARM\PACK\Keil\STM32F4xx_DFP\1.0.8\Device\Include --pred
+efine="__UVISION_VERSION SETA 524" --predefine="_RTE_ SETA 1" --predefine="STM3
+2F40_41xxx SETA 1" --list=startup_stm32f405xx.lst startup_stm32f405xx.s
 
 
 
